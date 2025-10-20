@@ -19,7 +19,8 @@ import uvicorn
 # ============================================================
 MODEL_PATH = "models/fachada_model_finetuned.keras"
 IMG_SIZE = (224, 224)
-CLASSES = ["no_valida", "valida"]
+CLASSES = ["valida", "no_valida"]
+
 
 # ============================================================
 # CARGA DE MODELO
