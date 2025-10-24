@@ -7,11 +7,11 @@ Autor: Cristian Yáñez — CorreosChile
 
 from fastapi import FastAPI, File, UploadFile
 from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing import image
 from tensorflow.keras.applications.efficientnet import preprocess_input
+from fastapi.middleware.cors import CORSMiddleware
 import numpy as np
 from PIL import Image
-import io
+from io import BytesIO
 import uvicorn
 
 # ============================================================
@@ -19,8 +19,7 @@ import uvicorn
 # ============================================================
 MODEL_PATH = "models/fachada_model_finetuned.keras"
 IMG_SIZE = (224, 224)
-CLASSES = ["valida", "no_valida"]
-
+THRESHOLD = 0.4  # ✅ mismo criterio que el modelo de paquetes
 
 # ============================================================
 # CARGA DE MODELO
@@ -35,27 +34,56 @@ print("✅ Modelo cargado correctamente.")
 app = FastAPI(
     title="POD-ML Fachada Service",
     description="API para clasificar imágenes de fachadas como válidas o no válidas",
-    version="1.0"
+    version="2.0"
 )
+
+# Permitir CORS (útil para pruebas desde otras apps)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 @app.get("/")
 async def root():
-    return {"status": "ok", "message": "POD-ML Fachada Service online"}
+    return {
+        "status": "ok",
+        "message": "POD-ML Fachada Service online 🚀",
+        "model": MODEL_PATH,
+        "threshold": THRESHOLD
+    }
+
 
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
-    contents = await file.read()
-    img = Image.open(io.BytesIO(contents)).convert("RGB")
-    img = img.resize(IMG_SIZE)
-    x = np.expand_dims(np.array(img), axis=0)
-    x = preprocess_input(x)
+    """
+    Recibe una imagen y devuelve la predicción: válida o no válida.
+    """
+    try:
+        contents = await file.read()
+        img = Image.open(BytesIO(contents)).convert("RGB").resize(IMG_SIZE)
+        img_array = np.array(img)
+        img_array = preprocess_input(img_array)
+        img_array = np.expand_dims(img_array, axis=0)
 
-    preds = model.predict(x)
-    prob_valida = float(preds[0][0])
-    label = CLASSES[int(round(prob_valida))]
-    confidence = round(prob_valida if label == "valida" else 1 - prob_valida, 4)
+        # === PREDICCIÓN ===
+        pred = model.predict(img_array, verbose=0)[0][0]
+        pred = float(pred)
 
-    return {"prediction": label, "confidence": confidence}
+        # === CLASIFICACIÓN ===
+        clase = "valida" if pred > THRESHOLD else "no_valida"
+
+        return {
+            "prediction": clase,
+            "confidence": round(pred, 4)
+        }
+
+    except Exception as e:
+        return {"error": f"❌ Error procesando imagen: {str(e)}"}
+
 
 if __name__ == "__main__":
     uvicorn.run("api_fachada:app", host="0.0.0.0", port=8000)
