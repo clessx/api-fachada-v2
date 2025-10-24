@@ -72,19 +72,20 @@ async def predict(file: UploadFile = File(...)):
         # === PREDICCIÓN ===
         pred = float(model.predict(img_array, verbose=0)[0][0])
 
-        # === CLASIFICACIÓN (orden corregido) ===
-        # En este modelo, valores bajos indican "no_valida" y altos "valida"
+        # === LÓGICA INVERTIDA ===
+        # Si el modelo dice "probabilidad alta" -> no_valida
+        # Si el modelo dice "probabilidad baja" -> valida
         if pred >= THRESHOLD:
-            clase = "valida"
+            clase = "no_valida"
             confidence = round(pred, 4)
         else:
-            clase = "no_valida"
+            clase = "valida"
             confidence = round(1 - pred, 4)
 
         return {
             "prediction": clase,
             "confidence": confidence,
-            "raw_score": round(pred, 4)  # 🔍 para debugging
+            "raw_score": round(pred, 4)
         }
 
     except Exception as e:
