@@ -34,7 +34,7 @@ print("✅ Modelo cargado correctamente.")
 app = FastAPI(
     title="POD-ML Fachada Service",
     description="API para clasificar imágenes de fachadas como válidas o no válidas",
-    version="2.0"
+    version="2.1"
 )
 
 # Permitir CORS (útil para pruebas desde otras apps)
@@ -70,15 +70,21 @@ async def predict(file: UploadFile = File(...)):
         img_array = np.expand_dims(img_array, axis=0)
 
         # === PREDICCIÓN ===
-        pred = model.predict(img_array, verbose=0)[0][0]
-        pred = float(pred)
+        pred = float(model.predict(img_array, verbose=0)[0][0])
 
-        # === CLASIFICACIÓN ===
-        clase = "valida" if pred > THRESHOLD else "no_valida"
+        # === CLASIFICACIÓN (orden corregido) ===
+        # En este modelo, valores bajos indican "no_valida" y altos "valida"
+        if pred >= THRESHOLD:
+            clase = "valida"
+            confidence = round(pred, 4)
+        else:
+            clase = "no_valida"
+            confidence = round(1 - pred, 4)
 
         return {
             "prediction": clase,
-            "confidence": round(pred, 4)
+            "confidence": confidence,
+            "raw_score": round(pred, 4)  # 🔍 para debugging
         }
 
     except Exception as e:
