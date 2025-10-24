@@ -19,7 +19,7 @@ import uvicorn
 # ============================================================
 MODEL_PATH = "models/fachada_model_finetuned.keras"
 IMG_SIZE = (224, 224)
-THRESHOLD = 0.4  # ✅ mismo criterio que el modelo de paquetes
+THRESHOLD = 0.5  # ✅ mismo criterio que el modelo de paquetes
 
 # ============================================================
 # CARGA DE MODELO
